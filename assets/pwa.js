@@ -2,6 +2,14 @@ let deferredPrompt = null;
 const installButton = document.getElementById('installAppButton');
 const browserHint = document.getElementById('browserHint');
 
+async function registerAppServiceWorker() {
+  if (!('serviceWorker' in navigator)) return;
+  try {
+    const registration = await navigator.serviceWorker.register('./sw.js');
+    registration.update().catch(() => {});
+  } catch (error) {}
+}
+
 function isStandalone() {
   return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
 }
@@ -22,11 +30,8 @@ function hintMessage() {
   return 'Open Team Builder in your main browser for the cleanest install flow.';
 }
 
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));
-}
-
 window.addEventListener('load', () => {
+  registerAppServiceWorker();
   if (browserHint && inHostileBrowser() && !isStandalone()) {
     browserHint.hidden = false;
     browserHint.textContent = hintMessage();

@@ -80,7 +80,6 @@ function loadState() {
 }
 
 const state = loadState();
-let saveTimer = null;
 let dragPayload = null;
 let roleMove = null;
 
@@ -143,12 +142,9 @@ function dutyGradient(role) {
 }
 
 function saveState() {
-  clearTimeout(saveTimer);
-  saveTimer = setTimeout(() => {
-    try {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-    } catch (error) {}
-  }, 180);
+  try {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch (error) {}
 }
 
 function flashFeedback(node, message) {
