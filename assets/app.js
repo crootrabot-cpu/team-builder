@@ -8,8 +8,12 @@ const addDutyForm = document.getElementById('addDutyForm');
 const addPersonForm = document.getElementById('addPersonForm');
 const createRoleButton = document.getElementById('createRoleButton');
 const resetBoardButton = document.getElementById('resetBoardButton');
+const dutyFeedback = document.getElementById('dutyFeedback');
+const personFeedback = document.getElementById('personFeedback');
 
 const STORAGE_KEY = 'team-builder-pages-v1';
+const palette = ['#295C52', '#457B6E', '#E09F3E', '#9C6644', '#875F9A', '#3F6CA8', '#D06C72'];
+const personColors = ['#0E7490', '#B45309', '#7C3AED', '#BE185D', '#2563EB', '#2F855A'];
 
 function uidSeed(prefix) {
   return `${prefix}-${Math.random().toString(16).slice(2, 10)}`;
@@ -76,8 +80,6 @@ function loadState() {
 }
 
 const state = loadState();
-const palette = ['#295C52', '#457B6E', '#E09F3E', '#9C6644', '#875F9A', '#3F6CA8', '#D06C72'];
-const personColors = ['#0E7490', '#B45309', '#7C3AED', '#BE185D', '#2563EB', '#2F855A'];
 let saveTimer = null;
 let dragPayload = null;
 let roleMove = null;
@@ -147,6 +149,17 @@ function saveState() {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     } catch (error) {}
   }, 180);
+}
+
+function flashFeedback(node, message) {
+  if (!node) return;
+  node.textContent = message;
+  node.dataset.visible = 'true';
+  window.clearTimeout(node._feedbackTimer);
+  node._feedbackTimer = window.setTimeout(() => {
+    node.textContent = '';
+    delete node.dataset.visible;
+  }, 2200);
 }
 
 function setDrag(type, payload, event) {
@@ -454,15 +467,22 @@ function renderLines() {
 }
 
 function addDuty(text) {
-  state.duties.unshift({ id: uid('duty'), text, color: palette[state.duties.length % palette.length] });
+  const nextDuty = { id: uid('duty'), text, color: palette[state.duties.length % palette.length] };
+  state.duties.unshift(nextDuty);
   render();
   saveState();
+  const firstCard = dutyPool?.querySelector('.pool-card');
+  firstCard?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  flashFeedback(dutyFeedback, `Added duty: ${text}`);
 }
 
 function addPerson(name, strengths) {
   state.people.unshift({ id: uid('person'), name, strengths, accent: personColors[state.people.length % personColors.length] });
   render();
   saveState();
+  const firstCard = peoplePool?.querySelector('.pool-card');
+  firstCard?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  flashFeedback(personFeedback, `Added person: ${name}`);
 }
 
 function createRole() {
@@ -588,9 +608,14 @@ if (addDutyForm) {
     event.preventDefault();
     const field = document.getElementById('newDutyText');
     const text = field.value.trim();
-    if (!text) return;
+    if (!text) {
+      flashFeedback(dutyFeedback, 'Type a duty first.');
+      field.focus();
+      return;
+    }
     addDuty(text);
     field.value = '';
+    field.focus();
   });
 }
 
@@ -601,10 +626,15 @@ if (addPersonForm) {
     const strengthsField = document.getElementById('newPersonStrengths');
     const name = nameField.value.trim();
     const strengths = strengthsField.value.trim();
-    if (!name) return;
+    if (!name) {
+      flashFeedback(personFeedback, 'Add a name first.');
+      nameField.focus();
+      return;
+    }
     addPerson(name, strengths);
     nameField.value = '';
     strengthsField.value = '';
+    nameField.focus();
   });
 }
 
