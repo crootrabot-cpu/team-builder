@@ -1,0 +1,19 @@
+{
+  "name": "Team Builder",
+  "short_name": "Team Builder",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#eef2ef",
+  "theme_color": "#1f423b",
+  "description": "Build an org chart by matching duties to strengths before titles.",
+  "icons": [
+    {
+      "src": "./assets/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#1f423b" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="icon" href="./assets/icon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="./assets/styles.css" />
+    <title>Team Builder · Org chart from duties first</title>
+  </head>
+  <body>
+    <div id="browserHint" class="browser-hint" hidden></div>
+    <header class="shell-header">
+      <div>
+        <a class="brand" href="./">Team Builder</a>
+        <p class="header-copy">Match duties to strengths first. Worry about titles later.</p>
+      </div>
+      <div class="header-actions">
+        <button id="resetBoardButton" class="ghost-button" type="button">Reset sample board</button>
+        <button id="createRoleButton" class="primary-button" type="button">Create role</button>
+        <button id="installAppButton" class="ghost-button" type="button" hidden>Install</button>
+      </div>
+    </header>
+    <main class="page-shell">
+      <section class="hero-card">
+        <div class="eyebrow">Duty-first org design</div>
+        <h1>Build the team from the work up, not the titles down.</h1>
+        <p class="lede">Drop duties on the left, people on the right, and role cards in the middle. Shape the real work mix first, then lock reporting lines and titles when the structure actually makes sense.</p>
+        <div class="hero-points">
+          <span class="pill">Drag duties into roles</span>
+          <span class="pill">Drop people by strengths</span>
+          <span class="pill">See workload mix instantly</span>
+          <span class="pill">Draw the org after the work is clear</span>
+        </div>
+      </section>
+
+      <section class="workspace-grid">
+        <aside class="surface-card side-panel">
+          <div class="panel-head">
+            <div>
+              <div class="panel-kicker">Left rail</div>
+              <h2>Job duties</h2>
+            </div>
+            <span class="panel-count" data-duty-count></span>
+          </div>
+          <p class="muted">Add rough duties fast. Drag them into roles. Delete the junk later.</p>
+          <form class="stack-form" id="addDutyForm">
+            <label>
+              Duty
+              <textarea id="newDutyText" rows="3" placeholder="Make sure all orders get shipped out."></textarea>
+            </label>
+            <button class="primary-button" type="submit">Add duty</button>
+          </form>
+          <div id="dutyPool" class="pool-list" aria-label="Duty pool"></div>
+        </aside>
+
+        <section class="board-shell">
+          <div class="board-topbar surface-card">
+            <div>
+              <div class="panel-kicker">Center board</div>
+              <h2>Role builder</h2>
+              <p class="muted">Create role cards, place them visually, then wire reporting lines when the work split feels right.</p>
+            </div>
+            <div class="board-stats">
+              <div><strong data-role-count>0</strong><span>Roles</span></div>
+              <div><strong data-assigned-duty-count>0</strong><span>Assigned duties</span></div>
+              <div><strong data-coverage>0%</strong><span>Coverage</span></div>
+            </div>
+          </div>
+          <div id="orgBoard" class="org-board" aria-label="Org board">
+            <svg id="orgLines" class="org-lines" aria-hidden="true"></svg>
+            <div id="rolesLayer" class="roles-layer"></div>
+            <div class="board-empty" id="boardEmpty">
+              <strong>No roles yet.</strong>
+              <p>Create a role, then drag in duties and a person.</p>
+            </div>
+          </div>
+        </section>
+
+        <aside class="surface-card side-panel">
+          <div class="panel-head">
+            <div>
+              <div class="panel-kicker">Right rail</div>
+              <h2>People</h2>
+            </div>
+            <span class="panel-count" data-people-count></span>
+          </div>
+          <p class="muted">Keep titles loose. Start by matching strengths and floor knowledge to the work.</p>
+          <form class="stack-form" id="addPersonForm">
+            <label>
+              Name
+              <input id="newPersonName" type="text" placeholder="Emily" />
+            </label>
+            <label>
+              Strengths
+              <input id="newPersonStrengths" type="text" placeholder="Returns · detail work" />
+            </label>
+            <button class="primary-button" type="submit">Add person</button>
+          </form>
+          <div id="peoplePool" class="pool-list" aria-label="People pool"></div>
+        </aside>
+      </section>
+    </main>
+    <script src="./assets/pwa.js" defer></script>
+    <script src="./assets/app.js" defer></script>
+  </body>
+</html>
