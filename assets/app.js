@@ -3,11 +3,17 @@ const peoplePool = document.getElementById('peoplePool');
 const rolesLayer = document.getElementById('rolesLayer');
 const board = document.getElementById('orgBoard');
 const linesSvg = document.getElementById('orgLines');
+const boardCanvas = document.getElementById('boardCanvas');
+const boardCanvasWrap = document.getElementById('boardCanvasWrap');
 const boardEmpty = document.getElementById('boardEmpty');
 const addDutyForm = document.getElementById('addDutyForm');
 const addPersonForm = document.getElementById('addPersonForm');
 const createRoleButton = document.getElementById('createRoleButton');
 const resetBoardButton = document.getElementById('resetBoardButton');
+const zoomOutButton = document.getElementById('zoomOutButton');
+const zoomInButton = document.getElementById('zoomInButton');
+const zoomResetButton = document.getElementById('zoomResetButton');
+const zoomLevelLabel = document.getElementById('zoomLevelLabel');
 const dutyFeedback = document.getElementById('dutyFeedback');
 const personFeedback = document.getElementById('personFeedback');
 
@@ -62,7 +68,7 @@ function defaultState() {
   };
   return {
     version: 1,
-    meta: { name: 'Team Builder', tagline: 'Match duties to strengths before titles.' },
+    meta: { name: 'Team Builder', tagline: 'Match duties to strengths before titles.', board_zoom: 0.82 },
     duties,
     people,
     roles: [roleOne, roleTwo],
@@ -173,11 +179,38 @@ function clearDropHighlights() {
 function ensureRoleDefaults(role) {
   role.title = role.title || '';
   role.duties = role.duties || [];
+  if (typeof role.collapsed !== 'boolean') role.collapsed = false;
   if (typeof role.x !== 'number') role.x = 100;
   if (typeof role.y !== 'number') role.y = 100;
 }
 
+function ensureMetaDefaults() {
+  state.meta = state.meta || {};
+  if (typeof state.meta.board_zoom !== 'number') state.meta.board_zoom = 0.82;
+}
+
+function boardZoom() {
+  ensureMetaDefaults();
+  return Math.max(0.55, Math.min(1.6, Number(state.meta.board_zoom || 1)));
+}
+
+function applyBoardZoom() {
+  ensureMetaDefaults();
+  const zoom = boardZoom();
+  if (boardCanvas) {
+    boardCanvas.style.transform = `scale(${zoom})`;
+  }
+  if (boardCanvasWrap) {
+    boardCanvasWrap.style.width = `${1680 * zoom}px`;
+    boardCanvasWrap.style.height = `${1080 * zoom}px`;
+  }
+  if (zoomLevelLabel) {
+    zoomLevelLabel.textContent = `${Math.round(zoom * 100)}%`;
+  }
+}
+
 function render() {
+  applyBoardZoom();
   renderDutyPool();
   renderPeoplePool();
   renderRoles();
@@ -254,6 +287,7 @@ function roleCardTemplate(role) {
   ensureRoleDefaults(role);
   const normalized = normalizeRoleShares(role);
   const assignedPerson = personById(role.person_id);
+  const collapsed = role.collapsed === true;
   const dutyMarkup = role.duties.length
     ? normalized.map((assignment) => {
         const duty = dutyById(assignment.duty_id);
@@ -286,6 +320,7 @@ function roleCardTemplate(role) {
         <div class="mini-badge">${assignedDutyCount} duty${assignedDutyCount === 1 ? '' : 'ies'} · ${assignedPerson ? 'assigned' : 'open'}</div>
       </div>
       <div class="role-actions">
+        <button class="mini-button" type="button" data-toggle-collapse="${role.id}">${collapsed ? 'Expand' : 'Collapse'}</button>
         <span class="role-drag-handle" data-role-drag-handle="${role.id}">Move</span>
         <button class="mini-button" type="button" data-delete-role="${role.id}">Delete</button>
       </div>
@@ -299,7 +334,7 @@ function roleCardTemplate(role) {
       <div class="summary-box">
         <div class="mini-badge">${titleText}</div>
         <strong>${normalized.reduce((sum, item) => sum + item.pct, 0)}%</strong>
-        <div class="muted">Workload mix across this role. Sliders below rebalance the pie instantly.</div>
+        <div class="muted">${collapsed ? 'Tap expand for the guts.' : 'Compact by collapsing when you want more roles on screen.'}</div>
       </div>
     </div>
     <div class="drop-slot" data-person-slot="${role.id}">
@@ -324,7 +359,7 @@ function roleCardTemplate(role) {
           <select data-reports-to="${role.id}">${reportOptions}</select>
         </label>
       </div>
-      <div class="footer-note">Drag this card around the board. The line updates after you choose who it reports to.</div>
+      <div class="footer-note">Drag this card around the board. Collapse it when you need to see more roles at once.</div>
     </div>
   `;
 }
@@ -335,7 +370,7 @@ function renderRoles() {
   state.roles.forEach((role) => {
     ensureRoleDefaults(role);
     const card = document.createElement('article');
-    card.className = 'role-card';
+    card.className = `role-card${role.collapsed ? ' is-collapsed' : ''}`;
     card.dataset.roleId = role.id;
     card.style.left = `${role.x}px`;
     card.style.top = `${role.y}px`;
@@ -380,6 +415,15 @@ function wireRoleEvents() {
       const role = roleById(roleId);
       if (!role) return;
       role.duties = role.duties.filter((item) => item.id !== assignmentId);
+      render();
+      saveState();
+    });
+  });
+  rolesLayer.querySelectorAll('[data-toggle-collapse]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const role = roleById(button.dataset.toggleCollapse);
+      if (!role) return;
+      role.collapsed = !role.collapsed;
       render();
       saveState();
     });
@@ -443,21 +487,19 @@ function wireRoleEvents() {
 }
 
 function renderLines() {
-  if (!linesSvg || !board) return;
-  const boardRect = board.getBoundingClientRect();
-  linesSvg.setAttribute('viewBox', `0 0 ${boardRect.width} ${boardRect.height}`);
+  if (!linesSvg || !boardCanvas) return;
+  linesSvg.setAttribute('viewBox', `0 0 ${boardCanvas.offsetWidth} ${boardCanvas.offsetHeight}`);
   linesSvg.innerHTML = state.roles.map((role) => {
     if (!role.reports_to_role_id) return '';
     const parentNode = rolesLayer.querySelector(`[data-role-id="${role.reports_to_role_id}"]`);
     const childNode = rolesLayer.querySelector(`[data-role-id="${role.id}"]`);
-    if (!parentNode || !childNode) return '';
-    const parentRect = parentNode.getBoundingClientRect();
-    const childRect = childNode.getBoundingClientRect();
-    const x1 = parentRect.left - boardRect.left + (parentRect.width / 2);
-    const y1 = parentRect.top - boardRect.top + parentRect.height;
-    const x2 = childRect.left - boardRect.left + (childRect.width / 2);
-    const y2 = childRect.top - boardRect.top;
-    const midY = y1 + Math.max(34, (y2 - y1) / 2);
+    const parentRole = roleById(role.reports_to_role_id);
+    if (!parentNode || !childNode || !parentRole) return '';
+    const x1 = parentRole.x + (parentNode.offsetWidth / 2);
+    const y1 = parentRole.y + parentNode.offsetHeight;
+    const x2 = role.x + (childNode.offsetWidth / 2);
+    const y2 = role.y;
+    const midY = y1 + Math.max(30, (y2 - y1) / 2);
     return `<path d="M ${x1} ${y1} C ${x1} ${midY}, ${x2} ${midY}, ${x2} ${y2}" stroke="#53756b" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.9"></path>`;
   }).join('');
 }
@@ -487,10 +529,11 @@ function createRole() {
     name: 'New role',
     title: '',
     person_id: null,
-    x: 140 + (state.roles.length % 3) * 80,
-    y: 120 + state.roles.length * 42,
+    x: 140 + (state.roles.length % 5) * 54,
+    y: 120 + state.roles.length * 34,
     reports_to_role_id: null,
     duties: [],
+    collapsed: true,
   });
   render();
   saveState();
@@ -558,17 +601,19 @@ function deleteRole(roleId) {
 function startRoleMove(event) {
   const handle = event.currentTarget;
   const card = handle.closest('.role-card');
-  if (!card || !board) return;
+  if (!card || !boardCanvas) return;
   const roleId = card.dataset.roleId;
   const role = roleById(roleId);
   if (!role) return;
-  const boardRect = board.getBoundingClientRect();
+  const zoom = boardZoom();
+  const canvasRect = boardCanvas.getBoundingClientRect();
   const cardRect = card.getBoundingClientRect();
   roleMove = {
     roleId,
-    offsetX: event.clientX - cardRect.left,
-    offsetY: event.clientY - cardRect.top,
-    boardRect,
+    zoom,
+    offsetX: (event.clientX - cardRect.left) / zoom,
+    offsetY: (event.clientY - cardRect.top) / zoom,
+    canvasRect,
   };
   card.dataset.dragging = 'true';
   handle.setPointerCapture(event.pointerId);
@@ -578,11 +623,11 @@ window.addEventListener('pointermove', (event) => {
   if (!roleMove) return;
   const role = roleById(roleMove.roleId);
   const card = rolesLayer.querySelector(`[data-role-id="${roleMove.roleId}"]`);
-  if (!role || !card) return;
-  const maxX = board.clientWidth - card.offsetWidth - 12;
-  const maxY = board.clientHeight - card.offsetHeight - 12;
-  role.x = Math.max(12, Math.min(maxX, event.clientX - roleMove.boardRect.left - roleMove.offsetX));
-  role.y = Math.max(12, Math.min(maxY, event.clientY - roleMove.boardRect.top - roleMove.offsetY));
+  if (!role || !card || !boardCanvas) return;
+  const maxX = boardCanvas.offsetWidth - card.offsetWidth - 12;
+  const maxY = boardCanvas.offsetHeight - card.offsetHeight - 12;
+  role.x = Math.max(12, Math.min(maxX, ((event.clientX - roleMove.canvasRect.left) / roleMove.zoom) - roleMove.offsetX));
+  role.y = Math.max(12, Math.min(maxY, ((event.clientY - roleMove.canvasRect.top) / roleMove.zoom) - roleMove.offsetY));
   card.style.left = `${role.x}px`;
   card.style.top = `${role.y}px`;
   renderLines();
@@ -596,8 +641,36 @@ window.addEventListener('pointerup', () => {
   saveState();
 });
 
-window.addEventListener('resize', renderLines);
+window.addEventListener('resize', () => {
+  applyBoardZoom();
+  renderLines();
+});
 window.addEventListener('dragend', clearDropHighlights);
+
+if (zoomOutButton) {
+  zoomOutButton.addEventListener('click', () => {
+    state.meta.board_zoom = Math.max(0.55, Number((boardZoom() - 0.1).toFixed(2)));
+    applyBoardZoom();
+    renderLines();
+    saveState();
+  });
+}
+if (zoomInButton) {
+  zoomInButton.addEventListener('click', () => {
+    state.meta.board_zoom = Math.min(1.6, Number((boardZoom() + 0.1).toFixed(2)));
+    applyBoardZoom();
+    renderLines();
+    saveState();
+  });
+}
+if (zoomResetButton) {
+  zoomResetButton.addEventListener('click', () => {
+    state.meta.board_zoom = 0.82;
+    applyBoardZoom();
+    renderLines();
+    saveState();
+  });
+}
 
 if (addDutyForm) {
   addDutyForm.addEventListener('submit', (event) => {

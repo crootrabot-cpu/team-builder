@@ -56,37 +56,48 @@ h3 { font-size: 1rem; letter-spacing: -0.02em; }
 .pool-actions, .role-actions, .person-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 .board-shell { display: grid; gap: 16px; }
 .board-topbar { padding: 18px 20px; display: flex; gap: 18px; justify-content: space-between; align-items: start; }
-.board-stats { display: flex; gap: 12px; flex-wrap: wrap; }
+.board-tools { display: grid; gap: 12px; justify-items: end; }
+.board-zoom-controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: flex-end; }
+.zoom-label { min-width: 4.75rem; text-align: center; padding: 11px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface-soft); font-weight: 700; }
+.board-stats { display: flex; gap: 12px; flex-wrap: wrap; justify-content: flex-end; }
 .board-stats div { min-width: 92px; padding: 12px 14px; border-radius: var(--radius-md); background: var(--surface-soft); border: 1px solid var(--line); display: grid; gap: 4px; }
 .board-stats strong { font-size: 1.25rem; letter-spacing: -0.04em; }
 .board-stats span { color: var(--muted); font-size: 0.92rem; }
-.org-board { position: relative; min-height: 860px; border-radius: 34px; background: linear-gradient(180deg, rgba(255,255,255,0.78) 0%, rgba(244,248,245,0.98) 100%); border: 1px solid var(--line); overflow: hidden; }
+.org-board { position: relative; min-height: 860px; border-radius: 34px; background: linear-gradient(180deg, rgba(255,255,255,0.78) 0%, rgba(244,248,245,0.98) 100%); border: 1px solid var(--line); overflow: auto; }
 .org-board::before { content: ''; position: absolute; inset: 0; background-image: linear-gradient(rgba(31,66,59,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(31,66,59,0.04) 1px, transparent 1px); background-size: 28px 28px; pointer-events: none; }
+.board-canvas-wrap { position: relative; width: 100%; min-width: 100%; min-height: 860px; }
+.board-canvas { position: relative; width: 1680px; height: 1080px; transform-origin: top left; }
 .org-lines { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; }
-.roles-layer { position: relative; min-height: 860px; z-index: 2; }
+.roles-layer { position: relative; width: 100%; height: 100%; z-index: 2; }
 .board-empty { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; color: var(--muted); z-index: 0; pointer-events: none; }
-.role-card { position: absolute; width: 320px; padding: 16px; display: grid; gap: 14px; touch-action: none; }
+.role-card { position: absolute; width: 236px; padding: 12px; display: grid; gap: 10px; touch-action: none; }
+.role-card.is-collapsed { width: 184px; gap: 8px; }
 .role-card.is-drop-target { outline: 2px solid rgba(31,66,59,0.35); outline-offset: 2px; }
-.role-head { display: flex; justify-content: space-between; gap: 12px; align-items: start; }
-.role-drag-handle { padding: 8px 10px; border-radius: 12px; background: var(--surface-soft); border: 1px solid var(--line); user-select: none; }
-.role-name-grid { display: grid; gap: 10px; }
-.role-summary { display: grid; grid-template-columns: 108px 1fr; gap: 14px; align-items: center; }
-.pie-chart { width: 108px; height: 108px; border-radius: 50%; border: 8px solid rgba(255,255,255,0.8); box-shadow: inset 0 0 0 1px rgba(31,66,59,0.06); }
-.summary-box { display: grid; gap: 8px; }
-.summary-box strong { font-size: 1.8rem; letter-spacing: -0.06em; }
-.drop-slot { min-height: 60px; padding: 12px; border-radius: var(--radius-md); border: 1.5px dashed var(--line); background: #fbfcfb; display: grid; gap: 8px; }
+.role-head { display: flex; justify-content: space-between; gap: 10px; align-items: start; }
+.role-drag-handle { padding: 6px 8px; border-radius: 12px; background: var(--surface-soft); border: 1px solid var(--line); user-select: none; font-size: 0.86rem; }
+.role-name-grid { display: grid; gap: 8px; }
+.role-summary { display: grid; grid-template-columns: 74px 1fr; gap: 10px; align-items: center; }
+.pie-chart { width: 74px; height: 74px; border-radius: 50%; border: 6px solid rgba(255,255,255,0.8); box-shadow: inset 0 0 0 1px rgba(31,66,59,0.06); }
+.summary-box { display: grid; gap: 6px; }
+.summary-box strong { font-size: 1.35rem; letter-spacing: -0.06em; }
+.drop-slot { min-height: 48px; padding: 10px; border-radius: var(--radius-md); border: 1.5px dashed var(--line); background: #fbfcfb; display: grid; gap: 8px; }
+.role-card.is-collapsed .role-name-grid,
+.role-card.is-collapsed .role-summary,
+.role-card.is-collapsed .drop-slot,
+.role-card.is-collapsed .role-footer { display: none; }
+.role-card.is-collapsed .role-head { margin-bottom: 0; }
 .drop-slot.is-active { border-color: var(--accent); background: #eef7f3; }
-.person-pill { display: inline-flex; align-items: center; gap: 8px; max-width: 100%; padding: 9px 12px; border-radius: 999px; border: 1px solid var(--line); background: #fff; }
-.person-pill strong { white-space: nowrap; }
-.person-pill span { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.duty-list { display: grid; gap: 10px; }
-.duty-chip { display: grid; gap: 8px; padding: 12px; border-radius: var(--radius-md); border: 1px solid var(--line); background: #fff; }
+.person-pill { display: inline-flex; align-items: center; gap: 8px; max-width: 100%; padding: 8px 10px; border-radius: 999px; border: 1px solid var(--line); background: #fff; }
+.person-pill strong { white-space: nowrap; font-size: 0.92rem; }
+.person-pill span { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.83rem; }
+.duty-list { display: grid; gap: 8px; }
+.duty-chip { display: grid; gap: 8px; padding: 10px; border-radius: var(--radius-md); border: 1px solid var(--line); background: #fff; }
 .duty-top { display: flex; align-items: start; gap: 8px; justify-content: space-between; }
-.duty-top p { margin: 0; line-height: 1.45; }
-.share-row { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; }
+.duty-top p { margin: 0; line-height: 1.35; font-size: 0.9rem; }
+.share-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; }
 .share-row input[type="range"] { width: 100%; }
-.share-badge { min-width: 52px; text-align: right; font-weight: 700; color: var(--accent); }
-.role-footer { display: grid; gap: 10px; }
+.share-badge { min-width: 44px; text-align: right; font-weight: 700; color: var(--accent); font-size: 0.86rem; }
+.role-footer { display: grid; gap: 8px; }
 .link-selects { display: grid; gap: 10px; }
 .link-selects label { display: grid; gap: 6px; color: var(--muted); font-size: 0.92rem; }
 .footer-note { color: var(--muted); font-size: 0.92rem; line-height: 1.4; }

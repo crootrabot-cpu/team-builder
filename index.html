@@ -64,18 +64,30 @@
               <h2>Role builder</h2>
               <p class="muted">Create role cards, place them visually, then wire reporting lines when the work split feels right.</p>
             </div>
-            <div class="board-stats">
-              <div><strong data-role-count>0</strong><span>Roles</span></div>
-              <div><strong data-assigned-duty-count>0</strong><span>Assigned duties</span></div>
-              <div><strong data-coverage>0%</strong><span>Coverage</span></div>
+            <div class="board-tools">
+              <div class="board-zoom-controls" aria-label="Board zoom controls">
+                <button id="zoomOutButton" class="ghost-button" type="button">−</button>
+                <span id="zoomLevelLabel" class="zoom-label">100%</span>
+                <button id="zoomInButton" class="ghost-button" type="button">+</button>
+                <button id="zoomResetButton" class="ghost-button" type="button">Reset zoom</button>
+              </div>
+              <div class="board-stats">
+                <div><strong data-role-count>0</strong><span>Roles</span></div>
+                <div><strong data-assigned-duty-count>0</strong><span>Assigned duties</span></div>
+                <div><strong data-coverage>0%</strong><span>Coverage</span></div>
+              </div>
             </div>
           </div>
           <div id="orgBoard" class="org-board" aria-label="Org board">
-            <svg id="orgLines" class="org-lines" aria-hidden="true"></svg>
-            <div id="rolesLayer" class="roles-layer"></div>
-            <div class="board-empty" id="boardEmpty">
-              <strong>No roles yet.</strong>
-              <p>Create a role, then drag in duties and a person.</p>
+            <div id="boardCanvasWrap" class="board-canvas-wrap">
+              <div id="boardCanvas" class="board-canvas">
+                <svg id="orgLines" class="org-lines" aria-hidden="true"></svg>
+                <div id="rolesLayer" class="roles-layer"></div>
+                <div class="board-empty" id="boardEmpty">
+                  <strong>No roles yet.</strong>
+                  <p>Create a role, then drag in duties and a person.</p>
+                </div>
+              </div>
             </div>
           </div>
         </section>
