@@ -164,6 +164,15 @@ function flashFeedback(node, message) {
   }, 2200);
 }
 
+function esc(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 function setDrag(type, payload, event) {
   dragPayload = { type, ...payload };
   if (event?.dataTransfer) {
@@ -174,6 +183,15 @@ function setDrag(type, payload, event) {
 
 function clearDropHighlights() {
   document.querySelectorAll('.is-active, .is-drop-target').forEach((node) => node.classList.remove('is-active', 'is-drop-target'));
+}
+
+function pendingPersonId() {
+  return state.meta?.pending_person_id || null;
+}
+
+function setPendingPerson(personId) {
+  ensureMetaDefaults();
+  state.meta.pending_person_id = personId || null;
 }
 
 function ensureRoleDefaults(role) {
@@ -257,29 +275,45 @@ function renderDutyPool() {
 function renderPeoplePool() {
   if (!peoplePool) return;
   peoplePool.innerHTML = '';
+  const selectedPersonId = pendingPersonId();
   state.people.forEach((person) => {
     const assigned = state.roles.find((role) => role.person_id === person.id);
     const card = document.createElement('article');
-    card.className = 'pool-card';
+    card.className = `pool-card${selectedPersonId === person.id ? ' is-selected' : ''}`;
     card.draggable = true;
-    card.addEventListener('dragstart', (event) => setDrag('person', { personId: person.id }, event));
+    card.addEventListener('dragstart', (event) => {
+      setPendingPerson(person.id);
+      setDrag('person', { personId: person.id }, event);
+      renderPeoplePool();
+    });
     card.innerHTML = `
       <div class="pool-meta">
-        <span class="mini-badge">${assigned ? `in ${assigned.name || 'role'}` : 'available'}</span>
+        <span class="mini-badge">${assigned ? `in ${esc(assigned.name || 'role')}` : (selectedPersonId === person.id ? 'selected for assignment' : 'available')}</span>
         <button class="mini-button" type="button" data-delete-person="${person.id}">Delete</button>
       </div>
       <div class="pool-copy">
         <span class="color-dot" style="background:${person.accent}"></span>
         <div>
-          <strong>${person.name}</strong>
-          <div class="muted">${person.strengths || 'No strengths added yet.'}</div>
+          <strong>${esc(person.name)}</strong>
+          <div class="muted">${esc(person.strengths || 'No strengths added yet.')}</div>
         </div>
+      </div>
+      <div class="pool-actions">
+        <button class="mini-button" type="button" data-select-person="${person.id}">${selectedPersonId === person.id ? 'Selected' : 'Assign to role'}</button>
       </div>
     `;
     peoplePool.appendChild(card);
   });
   peoplePool.querySelectorAll('[data-delete-person]').forEach((button) => {
     button.addEventListener('click', () => deletePerson(button.dataset.deletePerson));
+  });
+  peoplePool.querySelectorAll('[data-select-person]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const personId = button.dataset.selectPerson;
+      setPendingPerson(pendingPersonId() === personId ? null : personId);
+      saveState();
+      renderPeoplePool();
+    });
   });
 }
 
@@ -288,6 +322,17 @@ function roleCardTemplate(role) {
   const normalized = normalizeRoleShares(role);
   const assignedPerson = personById(role.person_id);
   const collapsed = role.collapsed === true;
+  const titleText = role.title?.trim() ? role.title : 'Add title under the name';
+  const assignedDutyCount = role.duties.length;
+  const roleNameText = role.name?.trim() ? role.name : 'New role';
+  const personSummary = assignedPerson ? esc(assignedPerson.name) : 'Drop or assign person';
+  const collapsedSummary = `
+    <div class="collapsed-summary" data-person-slot="${role.id}" data-collapsed-person-slot="${role.id}">
+      <div class="collapsed-name">${esc(roleNameText)}</div>
+      <div class="collapsed-title">${esc(titleText)}</div>
+      <div class="collapsed-person ${assignedPerson ? '' : 'is-empty'}">${personSummary}</div>
+    </div>
+  `;
   const dutyMarkup = role.duties.length
     ? normalized.map((assignment) => {
         const duty = dutyById(assignment.duty_id);
@@ -312,8 +357,6 @@ function roleCardTemplate(role) {
   const reportOptions = ['<option value="">Top of chart</option>']
     .concat(state.roles.filter((candidate) => candidate.id !== role.id).map((candidate) => `<option value="${candidate.id}" ${candidate.id === role.reports_to_role_id ? 'selected' : ''}>${candidate.name || 'Untitled role'}</option>`))
     .join('');
-  const titleText = role.title?.trim() ? role.title : 'Title still loose';
-  const assignedDutyCount = role.duties.length;
   return `
     <div class="role-head">
       <div>
@@ -325,9 +368,10 @@ function roleCardTemplate(role) {
         <button class="mini-button" type="button" data-delete-role="${role.id}">Delete</button>
       </div>
     </div>
+    ${collapsedSummary}
     <div class="role-name-grid">
-      <input type="text" value="${role.name || ''}" data-role-name="${role.id}" placeholder="Role focus" />
-      <input type="text" value="${role.title || ''}" data-role-title="${role.id}" placeholder="Optional title later" />
+      <input type="text" value="${esc(role.name || '')}" data-role-name="${role.id}" placeholder="Role focus" />
+      <input type="text" value="${esc(role.title || '')}" data-role-title="${role.id}" placeholder="Optional title later" />
     </div>
     <div class="role-summary">
       <div class="pie-chart" style="background:${dutyGradient(role)}"></div>
@@ -388,6 +432,8 @@ function wireRoleEvents() {
       saveState();
       renderMetrics();
       renderLines();
+      const card = input.closest('.role-card');
+      if (card?.classList.contains('is-collapsed')) renderRoles();
     });
   });
   rolesLayer.querySelectorAll('[data-role-title]').forEach((input) => {
@@ -395,6 +441,8 @@ function wireRoleEvents() {
       const role = roleById(input.dataset.roleTitle);
       role.title = input.value;
       saveState();
+      const card = input.closest('.role-card');
+      if (card?.classList.contains('is-collapsed')) renderRoles();
     });
   });
   rolesLayer.querySelectorAll('[data-share-slider]').forEach((slider) => {
@@ -449,6 +497,13 @@ function wireRoleEvents() {
     });
   });
   rolesLayer.querySelectorAll('[data-duty-slot], [data-person-slot]').forEach((slot) => {
+    slot.addEventListener('click', () => {
+      const roleId = slot.dataset.dutySlot || slot.dataset.personSlot;
+      if (!roleId || !slot.dataset.personSlot) return;
+      const personId = pendingPersonId();
+      if (!personId) return;
+      attachPersonToRole(personId, roleId);
+    });
     slot.addEventListener('dragover', (event) => {
       event.preventDefault();
       slot.classList.add('is-active');
@@ -475,10 +530,8 @@ function wireRoleEvents() {
     pill.addEventListener('dragstart', (event) => {
       const role = roleById(pill.dataset.rolePersonPill);
       if (!role?.person_id) return;
+      setPendingPerson(role.person_id);
       setDrag('person', { personId: role.person_id }, event);
-      role.person_id = null;
-      saveState();
-      render();
     });
   });
   rolesLayer.querySelectorAll('[data-role-drag-handle]').forEach((handle) => {
@@ -567,6 +620,8 @@ function attachPersonToRole(personId, targetRoleId) {
   const role = roleById(targetRoleId);
   if (!role) return;
   role.person_id = personId;
+  setPendingPerson(null);
+  dragPayload = null;
   render();
   saveState();
 }
